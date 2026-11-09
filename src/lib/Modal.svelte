@@ -5,7 +5,7 @@
 <div id="modal">
   <button id="close-btn" onclick={() => $isModalOpen = false} 
     aria-label="Close modal">&times;</button>
-  <h1>Intersections</h1>
+  <h1>Crossroads</h1>
 </div>
 
 <style>
