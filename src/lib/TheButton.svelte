@@ -3,7 +3,7 @@
   import { tweened } from 'svelte/motion';
   import { untrack } from 'svelte';
   import { circOut, elasticOut, elasticIn, elasticInOut, quartIn } from 'svelte/easing';
-  import { isTheButtonDepressed, isPoemRevealed, poemMetadata } from '$lib/store.js';
+  import { isTheButtonDepressed, isPoemRevealed, poemMetadata, isCursorMooning } from '$lib/store.js';
 
   let { x, y, r, animateIn } = $props();
 
@@ -89,7 +89,7 @@
     class:cool={ !$isTheButtonDepressed } class:open={ isAnimateOut } 
     onanimationend={ postButtonAnime } />
   {#if isLabelVisible && !isGreyedOut}
-    <text x={x} y={y + 2}>{id}</text>
+    <text x={x} y={y + 2} class:btn-ready={ $isCursorMooning }>{id}</text>
   {/if}
 </g>
 
@@ -137,19 +137,22 @@
     }
   }
 
-
   text {
     text-anchor: middle;
     alignment-baseline: middle;
-    fill: var(--moon-glow-fill);
+    fill: black;
     font-family: "Rubik", sans-serif;
     font-size: 6dvh;
     z-index: 2;
     pointer-events: none;
-    transition: fill 3.14s ease-out;
+  }
+
+  text.btn-ready {
+    fill: gold;
   }
 
   .period text {
+    transition: fill 3.14s ease-out;
     fill: black;
   }
 </style>
