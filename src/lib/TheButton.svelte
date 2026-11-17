@@ -1,13 +1,13 @@
 <script>
   import { goto } from '$app/navigation';
   import { tweened } from 'svelte/motion';
+  import { untrack } from 'svelte';
   import { circOut, elasticOut, elasticIn, elasticInOut, quartIn } from 'svelte/easing';
   import { isTheButtonDepressed, isPoemRevealed, poemMetadata } from '$lib/store.js';
 
   let { x, y, r, animateIn } = $props();
 
-  const circumference = r * Math.PI;
-  const maxDiagonal = Math.hypot(x, y);
+  const maxDiagonal = untrack(() => Math.hypot(x, y));
   const id = $poemMetadata.sefirahId;
 
   let isLabelVisible = $state(false);
