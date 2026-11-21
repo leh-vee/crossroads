@@ -2,75 +2,65 @@
   import { goto } from '$app/navigation';
   import { tweened } from 'svelte/motion';
   import { untrack } from 'svelte';
-  import { circOut, elasticOut, elasticIn, elasticInOut, quartIn } from 'svelte/easing';
-  import { isTheButtonDepressed, isPoemRevealed, poemMetadata, isCursorMooning } from '$lib/store.js';
+  import { circOut, elasticOut, elasticIn, elasticInOut, quartIn, cubicOut } from 'svelte/easing';
+  import { poemMetadata, percentRead, isPoemUnread, isPoemRevealed,
+    isMooning, isTyping, isGerminating, isBreaking } from '$lib/store.js';
 
-  let { x, y, r, animateIn } = $props();
+  let { x, y, r, animateBtnIn } = $props();
 
   const maxDiagonal = untrack(() => Math.hypot(x, y));
   const id = $poemMetadata.sefirahId;
 
-  let isLabelVisible = $state(false);
+  let circumference = $derived(Math.round(2 * Math.PI * r));
+  let readOffset = $derived(Math.round(circumference * (1 - $percentRead)));
+  let unreadOffset = $derived($percentRead === 0 ? circumference : circumference - readOffset);  
 
   const btnRadius = tweened(0, {
     duration: Math.PI * 1000,
     easing: circOut
   });
 
+  $effect(async () => { if (animateBtnIn) btnRadius.set(r) });
+
   const glowRadius = tweened(0, {
     duration: Math.PI * 1000,
     easing: elasticOut
   });
 
-  $effect(async () => {
-    if (animateIn) {
-      isGreyedOut = false;
-      $isPoemRevealed = false;
-      $isTheButtonDepressed = false;
-      await Promise.all([
-        btnRadius.set(r),
-        glowRadius.set(r)
-      ]);
-      isLabelVisible = true;
+  $effect(async () => { 
+    while ($isTyping || $isBreaking) {
+      await glowRadius.set(r * 1.5, { duration: 1570, easing: elasticOut });
+      await glowRadius.set(r * 1.3, { duration: 1570, easing: elasticIn });
     }
+    if ($isGerminating) glowRadius.set(0, { duration: 3141, easing: cubicOut });
   });
 
   let isGreyedOut = $state(false);
-  let isAnimateOut = $state(false);
+  let isNova = $state(false);
 
-  $effect(async () => {
-    if ($isTheButtonDepressed && $isPoemRevealed) {
-      if (isGreyedOut) {
-        animateOut();
-      } else {
-        $isTheButtonDepressed = false;
-      }
-    } else if ($isTheButtonDepressed && isLabelVisible) {
-      elasticGlow();
-    }
-  });
-
-  async function elasticGlow() {
-    if ($isTheButtonDepressed) {
-      await glowRadius.set(r * 1.5, { duration: 1570, easing: elasticOut });
-      await glowRadius.set(r * 1.3, { duration: 1570, easing: elasticIn });
-      elasticGlow();
-    } else {
-      glowRadius.set(r, { easing: elasticInOut } );
-    }
-  }
+  // $effect(async () => {
+  //   if ($isPoemRevealed) {
+  //     if (isGreyedOut) {
+  //       animateOut();
+  //     } else {
+  //       $isTyping = false;
+  //     }
+    // } else if ($isTyping && isLabelVisible) {
+    //   elasticGlow();
+    // }
+  // });
 
   async function animateOut() {
     const duration = 314;
-    isAnimateOut = true;
+    isNova = true;
     glowRadius.set(maxDiagonal * 5, { duration, easing: quartIn });
     await btnRadius.set(maxDiagonal, { duration, easing: quartIn });
     goto('/');
   }
 
-  function postButtonAnime(event) {
+  function onBtnAnimationEnd(event) {
     const animeName = event.animationName.split('-').pop();
-    if (animeName === 'gris') isGreyedOut = true;
+    if (animeName === 'greyOut') isGreyedOut = true;
   }
 
 </script>
@@ -84,32 +74,54 @@
 </defs>
 
 <g class:period={ $isPoemRevealed }>
-  <circle class="glow" cx={x} cy={y} r={ $glowRadius } fill="url(#glow-grad-{id})" />
-  <circle cx={x} cy={y} r={ $btnRadius } transform-origin="{x}px {y}px"
-    class:cool={ !$isTheButtonDepressed } class:open={ isAnimateOut } 
-    onanimationend={ postButtonAnime } />
-  {#if isLabelVisible && !isGreyedOut}
-    <text x={x} y={y + 2} class:btn-ready={ $isCursorMooning }>{id}</text>
+  <circle class="btn whole" class:cool={ animateBtnIn }
+    class:show={ $isPoemUnread } cx={x} cy={y} r={ $btnRadius } 
+    transform-origin="{x}px {y}px" />
+  <g transform={`translate(${x} ${y}) scale(-1 1) translate(${-x} ${-y})`}>
+    <circle
+      class="btn partial"
+      class:show={ !$isPoemUnread && ($isGerminating || $isMooning) }
+      fill="none"
+      cx={x}
+      cy={y}
+      r={r}
+      transform={`rotate(-90 ${x} ${y})`}
+      stroke-dasharray={circumference}
+      style:--circumference="{circumference}px"
+      style:--unread-offset="{unreadOffset}px"
+    />
+  </g>
+  <circle class="progress" cx={x} cy={y} r={ r }
+    transform={`rotate(-90 ${x} ${y})`} fill="none"
+    stroke-dasharray={ circumference } 
+    style:--circumference="{circumference}px"
+    style:--read-offset="{readOffset}px"
+    class:show={ !$isPoemUnread && ($isGerminating || $isMooning) } />
+  <circle class="sun" cx={x} cy={y} r={ $glowRadius } fill="url(#glow-grad-{id})" />
+  {#if $isMooning}
+    <text x={x} y={y + 2} >{id}</text>
   {/if}
 </g>
 
 <style>
-  circle.glow {
+  circle.btn {
+    stroke-width: 0;
     stroke: none;
-    pointer-events: none;
   }
 
-  circle {
+  circle.whole.btn.show {
     stroke-width: 2;
     stroke: gold;
   }
 
-  circle.open {
-    stroke: none;
+  circle.btn.whole.show.cool {
+    animation: coolDown 3.14s ease-in forwards;
+    stroke: var(--moon-glow-stroke);
   }
-  
-  circle.cool {
-    animation: coolDown 3.14s ease-out forwards;
+
+  circle.btn.whole.show.cool {
+    animation: coolDown 3.14s ease-in forwards;
+    stroke: var(--moon-glow-stroke);
   }
 
   @keyframes coolDown {
@@ -121,12 +133,64 @@
     }
   }
 
-  .period circle.cool {
-    animation: gris 3.14s ease-out forwards;
+  circle.partial.btn {
+    stroke-dashoffset: var(--circumference);
+  }
+
+  circle.partial.btn.show {
+    stroke-width: 2;
+    stroke: var(--moon-glow-stroke);
+    animation: drawUnread 3.14s ease-out forwards;
+  }
+
+  @keyframes drawUnread {
+    from { stroke-dashoffset: var(--circumference); }
+    to   { stroke-dashoffset: var(--unread-offset); }
+  }
+
+  circle.progress {
+    stroke-dashoffset: var(--circumference);
+    stroke-width: 0;
+    stroke: none;
+  }
+
+  circle.progress.show {
+    stroke-width: 2;
+    stroke: gold;
+    animation: drawRead 3.14s ease-out forwards;
+  }
+
+  @keyframes drawRead {
+    from { stroke-dashoffset: var(--circumference); }
+    to   { stroke-dashoffset: var(--read-offset); }
+  }
+
+  text {
+    text-anchor: middle;
+    alignment-baseline: middle;
+    fill: gold;
+    font-family: "Rubik", sans-serif;
+    font-size: 6dvh;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .period text {
+    transition: fill 3.14s ease-out;
+    fill: black;
+  }
+
+  circle.sun {
+    stroke: none;
+    pointer-events: none;
+  }
+
+  .period circle.btn {
+    animation: greyOut 3.14s ease-out forwards;
     stroke: grey;
   }
 
-  @keyframes gris {
+  @keyframes greyOut {
     0% { 
       stroke-width: 2;
       stroke: var(--moon-glow-stroke);
@@ -135,24 +199,5 @@
       stroke-width: 1;
       stroke: grey;
     }
-  }
-
-  text {
-    text-anchor: middle;
-    alignment-baseline: middle;
-    fill: black;
-    font-family: "Rubik", sans-serif;
-    font-size: 6dvh;
-    z-index: 2;
-    pointer-events: none;
-  }
-
-  text.btn-ready {
-    fill: gold;
-  }
-
-  .period text {
-    transition: fill 3.14s ease-out;
-    fill: black;
   }
 </style>

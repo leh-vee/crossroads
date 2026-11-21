@@ -4,7 +4,7 @@
   import VectorTileLayer from 'ol/layer/VectorTile.js';
   import VectorTileSource from 'ol/source/VectorTile.js';
   import MVT from 'ol/format/MVT.js';
-  import { isTheButtonDepressed, isPoemRevealed, poemMetadata } from '$lib/store.js';
+  import { isTyping, isPoemRevealed, poemMetadata } from '$lib/store.js';
   import { createEventDispatcher } from 'svelte';
   const dispatch = createEventDispatcher();
 
@@ -15,7 +15,7 @@
   let isMapVisible = $state(false);
 
   $effect(() => {
-    if ($isTheButtonDepressed && !$isPoemRevealed) electrocute();
+    if ($isTyping && !$isPoemRevealed) electrocute();
   });
 
   function electrocute(turnOn = true) {

@@ -4,7 +4,7 @@
   import Curtains from '$lib/Curtains.svelte';
   import Drop from '$lib/Drop.svelte';
   import Poem from '$lib/Poem.svelte';
-  import { poemIndex, isCursorMooning, isTheButtonDepressed, isPoemRevealed } from '$lib/store.js';
+  import { poemIndex, lineState, isMooning, isPoemRevealed } from '$lib/store.js';
 
   let browserHeight = $state(undefined);
   let browserWidth = $state(undefined);
@@ -33,9 +33,9 @@
   let areCurtainsDrawn = $state(false);
 
   function pageClicked(event) {
-    if (($isCursorMooning || $isPoemRevealed) && 
+    if (($isMooning || $isPoemRevealed) && 
         isBtnClick(event.clientX, event.clientY)) {
-      $isTheButtonDepressed = true;
+      lineState.set('typing');
     }
   }
 
@@ -67,7 +67,7 @@
           yEndPx={ btnPxCoords[1] } on:splat={ () => { hasDropped = true }} />
       {/if}
       <TheButton x={ btnPxCoords[0] } y={ btnPxCoords[1] }
-        r={ btnRadius } animateIn={ openSesame } />
+        r={ btnRadius } animateBtnIn={ openSesame } />
     </svg>
   {/if}
 </div>

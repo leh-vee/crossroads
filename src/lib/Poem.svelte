@@ -1,8 +1,8 @@
 <script>
   import Title from '$lib/Title.svelte';
+  import { poemLines, lineState, isMooning, isTyping, isBreaking, percentRead,
+    isPoemRevealed } from '$lib/store.js';
   import fitty from 'fitty';
-  import { poemLines, cursorState, isCursorMooning, isCursorTyping, 
-    isTheButtonDepressed, isPoemRevealed } from '$lib/store.js';
 
   let { title, overflowY } = $props();
   
@@ -44,12 +44,13 @@
   }
 
   $effect(() => {
-    if ($isCursorMooning && $isTheButtonDepressed && nextLineToType < nLineEls) typeLine();
+    if ($isTyping && nextLineToType < nLineEls) typeLine();
   });
+
+  $effect(() => { console.log("line state:", $lineState) }); 
 
   function typeLine() {
     isNewLine = false;
-    $cursorState = 'typing';
     let nextCharToTypeIndex = 1;
     const typeChar = () => {
       lineEl.textContent = stashedText.slice(0, nextCharToTypeIndex);
@@ -58,7 +59,7 @@
       let typingDelay = randomInt(100, 200);
       if (/[.,;:!?[\]{}\–—]/.test(char)) typingDelay = randomInt(1000, Math.PI * 1000);
       if (nextCharToTypeIndex === stashedText.length) {
-        $cursorState = false;
+        lineState.set('breaking');
         setTimeout(endOfLine, typingDelay);
       } else {
         let typingDelay = randomInt(100, 200);
@@ -70,11 +71,15 @@
     typeChar();
   }
 
+  $effect(() => {
+  });
+
   function endOfLine() {
-    $isTheButtonDepressed = false;
+    nextLineToType += 1;
+    lineState.set('breaking');
     setTimeout(() => {
-      nextLineToType += 1;
       if (nextLineToType < nLineEls) {
+        percentRead.set(nextLineToType / nLines);
         newLineSetup();
       } else {
         $isPoemRevealed = true;
@@ -83,6 +88,7 @@
   }
 
   function newLineSetup() {
+    lineState.set('germinating');
     stashNextLineText();
     if (isPoemOverflowing) {
       const newLineRect = lineEl.getBoundingClientRect();
@@ -117,9 +123,9 @@
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  function postLineAnime(event) {
+  function onLineElAnimeEnd(event) {
     const animeName = event.animationName.split('-').pop();
-    if (animeName === 'emanate') $cursorState = 'mooning';
+    if (animeName === 'emanate') lineState.set('mooning');
   }
 
 </script>
@@ -127,11 +133,13 @@
 <div id='text' style="visibility: {isTextVisible ? 'visible' : 'hidden'}">
   <Title on:titled={ newLineSetup } />
   <div id='poem' bind:this={ poemEl }>
-    <div id='body' class:cursor={ isTextVisible } class:new={ isNewLine } class:typing={ $isCursorTyping } 
+    <div id='body' class:cursor={ isTextVisible } class:new={ isNewLine } class:typing={ $isTyping } 
       style:padding-bottom="{ poemOverflowPx }px">
       {#each $poemLines as line, i}
-        <span class='line' bind:this={ lineEls[i] } onanimationend={ postLineAnime }
-          class:current={ i === nextLineToType }>{ line }</span>
+        <span class='line' bind:this={ lineEls[i] } class:current={ i === nextLineToType }
+          onanimationend={ onLineElAnimeEnd } >
+          { line }
+        </span>
       {/each}
     </div>
   </div>

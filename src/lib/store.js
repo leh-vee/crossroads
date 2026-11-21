@@ -6,18 +6,16 @@ export const piTail = writable(null);
 export const extraTailEnd = writable(null);
 export const poemTailIndexMap = writable([]);
 
-export const cursorState = writable(false); // false; mooning; typing
-export const isCursorMooning = derived(cursorState, ($cursorState) => $cursorState === 'mooning');
-export const isCursorTyping = derived(cursorState, ($cursorState) => $cursorState === 'typing');
-export const isCursor = derived(cursorState, ($cursorState) => $cursorState != false);
+export const lineState = writable('germinating'); // germinating, mooning, typing, breaking
+export const isGerminating = derived(lineState, ($lineState) => $lineState === 'germinating');
+export const isMooning = derived(lineState, ($lineState) => $lineState === 'mooning');
+export const isTyping = derived(lineState, ($lineState) => $lineState === 'typing');
+export const isBreaking = derived(lineState, ($lineState) => $lineState === 'breaking');
 
-export const isTheButtonDepressed = writable(true);
 export const isModalOpen = writable(false);
-export const isPoemRevealed = writable(false);
 
-export const currentPoemId = writable(undefined);
 export const poemMetadata = writable({});
-export const poemLines = writable([]);
+export const currentPoemId = writable(undefined);
 
 export const isPoemSelected = derived(currentPoemId, ($currentPoemId) => {
   return $currentPoemId !== undefined;
@@ -30,6 +28,15 @@ export const lastPoemReadId = derived(poemsRead, ($poemsRead) => {
   if ($poemsRead.length > 0) id = $poemsRead[0].id;
   return id;
 });
+
+export const poemLines = writable([]);
+export const percentRead = writable(0);
+export const isPoemUnread = derived([percentRead, isGerminating, isMooning], 
+  ([$percentRead, $isGerminating, $isMooning]) => {
+    return $percentRead === 0 && ($isGerminating || $isMooning);
+  }
+);
+export const isPoemRevealed = writable(false);
 
 export const readPoemIds = derived(poemsRead, ($poemsRead) => {
   return [...new Set($poemsRead.map(p => p.id))];
